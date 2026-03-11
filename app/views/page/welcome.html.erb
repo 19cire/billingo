@@ -1,0 +1,97 @@
+<div class="welcome">
+
+  <div class="welcome__header">
+    <span class="welcome__logo">Billingo</span>
+    <%= link_to "Abmelden", destroy_user_session_path, data: { turbo_method: :delete }, class: "welcome__logout" %>
+  </div>
+
+  <div class="welcome__body">
+    <h1>Hallo, <%= current_user.user_name.presence || current_user.email.split("@").first %></h1>
+    <p>Was möchtest du heute tun?</p>
+
+    <div class="welcome__actions">
+      <%= link_to "＋ Neue Rechnung", new_invoice_path, class: "btn btn--primary" %>
+      <%= link_to "Alle Rechnungen", invoices_path, class: "btn btn--secondary" %>
+      <%= link_to "Einstellungen", edit_user_registration_path, class: "btn btn--secondary" %>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  body {
+    font-family: sans-serif;
+    background: #fafafa;
+    color: #111;
+    margin: 0;
+  }
+
+  .welcome {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .welcome__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e5e5;
+    margin-bottom: 3rem;
+  }
+
+  .welcome__logo {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .welcome__logout {
+    font-size: 0.85rem;
+    color: #999;
+    text-decoration: none;
+  }
+  .welcome__logout:hover { color: #111; }
+
+  .welcome__body h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .welcome__body p {
+    color: #777;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+  }
+
+  .welcome__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 280px;
+  }
+
+  .btn {
+    display: block;
+    text-align: center;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+
+  .btn--primary {
+    background: #111;
+    color: #fff;
+  }
+
+  .btn--secondary {
+    background: white;
+    color: #111;
+    border: 1px solid #e5e5e5;
+  }
+</style>

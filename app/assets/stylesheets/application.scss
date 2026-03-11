@@ -1,0 +1,8 @@
+// Sassy
+@use "home.scss";
+@use "login.scss";
+.content{
+    background-color: antiquewhite;
+    border:  solid 5px black;
+    border-radius: 5px;
+}

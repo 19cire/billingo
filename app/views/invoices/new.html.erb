@@ -1,0 +1,464 @@
+<div class="invoice-new">
+
+  <div class="page-header">
+    <div>
+      <h1>Neue Rechnung</h1>
+      <p>Rechnungsnummer wird automatisch vergeben</p>
+    </div>
+    <%= link_to "← Zurück", invoices_path, class: "btn-back" %>
+  </div>
+
+  <%= simple_form_for @invoice, html: { class: "invoice-form", id: "invoice-form" } do |f| %>
+
+    <% if @invoice.errors.any? %>
+      <div class="form-errors">
+        <% @invoice.errors.full_messages.each do |msg| %>
+          <p>⚠ <%= msg %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Kunde & Datum -->
+    <div class="form-section">
+      <h2>Allgemein</h2>
+      <div class="form-grid">
+
+         <div class="form-field">
+          <%= f.label :seller_id, "Meine Adresse" %>
+          <%= f.collection_select :seller_id, 
+              current_user.sellers.order(:name),
+               :id, :name, 
+               { prompt: "Absender auswählen..." }, 
+               class: "form-input" %>
+          <%= render "sellers/seller_modal_trigger" %>
+        </div>
+
+        <div class="form-field">
+          <%= f.label :customer_id, "Kunde" %>
+          <%= f.collection_select :customer_id,
+              current_user.customers.order(:name),
+              :id, :name,
+              { prompt: "Kunde auswählen..." },
+              class: "form-input" %>
+           <%= render "customers/customer_modal_trigger" %>
+        </div>
+
+        <div class="form-field">
+          <%= f.label :status, "Status" %>
+          <%= f.select :status,
+              [["Entwurf", "draft"], ["Offen", "open"], ["Bezahlt", "paid"], ["Überfällig", "overdue"]],
+              { selected: "draft" },
+              class: "form-input" %>
+        </div>
+
+        <div class="form-field">
+          <%= f.label :issue_date, "Rechnungsdatum" %>
+          <%= f.date_field :issue_date, class: "form-input", value: Date.today %>
+        </div>
+
+        <div class="form-field">
+          <%= f.label :delivery_date, "Leistungszeitraum von" %>
+          <%= f.date_field :delivery_date, class: "form-input" %>
+        </div>
+
+        <div class="form-field">
+          <%= f.label :service_period_end, "Leistungszeitraum bis (optional)" %>
+          <%= f.date_field :service_period_end, class: "form-input" %>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Rechnungspositionen -->
+    <div class="form-section">
+      <div class="section-header">
+        <h2>Positionen</h2>
+        <button type="button" class="btn-add-item" id="add-item">＋ Position hinzufügen</button>
+      </div>
+
+      <div class="items-table">
+        <div class="items-header">
+          <span>Beschreibung</span>
+          <span>Menge</span>
+          <span>Einheit</span>
+          <span>Einzelpreis</span>
+          <span>MwSt.</span>
+          <span>Gesamt</span>
+          <span></span>
+        </div>
+
+        <div id="invoice-items">
+          <%= f.fields_for :invoice_items do |item| %>
+            <%= render "invoice_item_fields", f: item %>
+          <% end %>
+        </div>
+
+        <!-- Template für JS -->
+        <template id="item-template">
+          <div class="item-row" data-index="NEW_INDEX">
+            <input type="text"    name="invoice[invoice_items_attributes][NEW_INDEX][description]" placeholder="Beschreibung" class="form-input">
+            <input type="number"  name="invoice[invoice_items_attributes][NEW_INDEX][quantity]"    placeholder="1" step="0.01" class="form-input" value="1">
+            <select               name="invoice[invoice_items_attributes][NEW_INDEX][unit_code]"   class="form-input">
+              <option value="C62">Stück</option>
+              <option value="HUR">Stunde</option>
+              <option value="DAY">Tag</option>
+              <option value="MON">Monat</option>
+            </select>
+            <input type="number"  name="invoice[invoice_items_attributes][NEW_INDEX][unit_price]"  placeholder="0.00" step="0.01" class="form-input item-price">
+            <select               name="invoice[invoice_items_attributes][NEW_INDEX][tax_rate]"    class="form-input item-tax">
+              <option value="19">19%</option>
+              <option value="7">7%</option>
+              <option value="0">0%</option>
+            </select>
+            <span class="item-total">€ 0.00</span>
+            <button type="button" class="btn-remove-item" onclick="this.closest('.item-row').remove(); updateTotals()">✕</button>
+          </div>
+        </template>
+
+      </div>
+
+      <!-- Summen -->
+      <div class="invoice-totals">
+        <div class="total-row">
+          <span>Netto</span>
+          <span id="total-net">€ 0.00</span>
+        </div>
+        <div class="total-row">
+          <span>MwSt.</span>
+          <span id="total-tax">€ 0.00</span>
+        </div>
+        <div class="total-row total-row--grand">
+          <span>Gesamt</span>
+          <span id="total-gross">€ 0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zusatzinfos -->
+    <!-- Zusatzinfos -->
+    <div class="form-section">
+      <h2>Weitere Angaben</h2>
+      <div class="form-grid">
+
+        <div class="form-field">
+          <%= f.label :order_reference, "Projektnummer" %>
+          <%= f.text_field :order_reference, class: "form-input", placeholder: "Optional" %>
+        </div>
+
+        <div class="form-field">
+          <%= f.label :project_title, "Projekttitel" %>
+          <%= f.text_field :project_title, class: "form-input", placeholder: "z.B. Konzert Berlin 2024" %>
+        </div>
+
+        <div class="form-field">
+          <%= f.label :project_manager, "Projektleiter" %>
+          <%= f.text_field :project_manager, class: "form-input", placeholder: "Name des Projektleiters" %>
+        </div>
+
+        <div class="form-field">
+          <%= f.label :production_location, "Produktionsort" %>
+          <%= f.text_field :production_location, class: "form-input", placeholder: "z.B. Berlin" %>
+        </div>
+
+        <div class="form-field form-field--full">
+          <%= f.label :intro_text, "Einleitungstext" %>
+          <%= f.text_area :intro_text, class: "form-input form-textarea",
+              placeholder: "Hiermit stelle ich Ihnen für meine auftragsgemäß erbrachte Leistung...",
+              rows: 3 %>
+        </div>
+
+        <div class="form-field form-field--full">
+          <%= f.label :notes, "Notizen" %>
+          <%= f.text_area :notes, class: "form-input form-textarea", placeholder: "Interne Notizen", rows: 2 %>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <%= f.submit "Rechnung speichern", class: "btn-save" %>
+      <%= link_to "Abbrechen", invoices_path, class: "btn-cancel" %>
+    </div>
+
+  <% end %>
+
+</div>
+<%= render "sellers/seller_modal" %>
+<%= render "customers/customer_modal" %>
+
+<script>
+  let itemIndex = <%= @invoice.invoice_items.size %>;
+
+  document.getElementById("add-item").addEventListener("click", () => {
+    const template = document.getElementById("item-template").innerHTML;
+    const html = template.replaceAll("NEW_INDEX", itemIndex++);
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    const row = div.firstElementChild;
+    document.getElementById("invoice-items").appendChild(row);
+    row.querySelectorAll(".item-price, .item-tax").forEach(el => {
+      el.addEventListener("input", updateTotals);
+    });
+    row.querySelector("input[name*='[quantity]']").addEventListener("input", updateTotals);
+  });
+
+  function updateTotals() {
+    let net = 0, tax = 0;
+    document.querySelectorAll(".item-row").forEach(row => {
+      const qty   = parseFloat(row.querySelector("input[name*='[quantity]']")?.value) || 0;
+      const price = parseFloat(row.querySelector(".item-price")?.value) || 0;
+      const rate  = parseFloat(row.querySelector(".item-tax")?.value) || 0;
+      const lineNet = qty * price;
+      const lineTax = lineNet * (rate / 100);
+      net += lineNet;
+      tax += lineTax;
+      const totalEl = row.querySelector(".item-total");
+      if (totalEl) totalEl.textContent = "€ " + (lineNet + lineTax).toFixed(2);
+    });
+    document.getElementById("total-net").textContent   = "€ " + net.toFixed(2);
+    document.getElementById("total-tax").textContent   = "€ " + tax.toFixed(2);
+    document.getElementById("total-gross").textContent = "€ " + (net + tax).toFixed(2);
+  }
+
+  document.addEventListener("input", e => {
+    if (e.target.matches(".item-price, .item-tax, input[name*='[quantity]']")) {
+      updateTotals();
+    }
+  });
+</script>
+
+<style>
+  body {
+    font-family: sans-serif;
+    background: #fafafa;
+    color: #111;
+    margin: 0;
+  }
+
+  .invoice-new {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .page-header h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+  }
+
+  .page-header p {
+    color: #999;
+    font-size: 0.85rem;
+  }
+
+  .btn-back {
+    font-size: 0.85rem;
+    color: #666;
+    text-decoration: none;
+  }
+  .btn-back:hover { color: #111; }
+
+  /* Errors */
+  .form-errors {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+    color: #c0392b;
+  }
+
+  /* Sections */
+  .form-section {
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .form-section h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    color: #111;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+  }
+  .section-header h2 { margin-bottom: 0; }
+
+  /* Grid */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .form-field--full { grid-column: 1 / -1; }
+
+  .form-field label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #444;
+  }
+
+  .form-input {
+    border: 1px solid #e5e5e5;
+    border-radius: 7px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+    font-family: sans-serif;
+    color: #111;
+    background: white;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+    appearance: none;
+  }
+  .form-input:focus { border-color: #111; }
+  .form-input::placeholder { color: #bbb; }
+
+  .form-textarea { resize: vertical; }
+
+  /* Items table */
+  .items-header {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1.5fr 1fr 1.2fr 0.3fr;
+    gap: 0.5rem;
+    padding: 0 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #e5e5e5;
+    margin-bottom: 0.5rem;
+  }
+
+  .item-row {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1.5fr 1fr 1.2fr 0.3fr;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f5f5f5;
+  }
+
+  .item-total {
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-align: right;
+  }
+
+  .btn-add-item {
+    background: #111;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-add-item:hover { opacity: 0.8; }
+
+  .btn-remove-item {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.25rem;
+    transition: color 0.15s;
+  }
+  .btn-remove-item:hover { color: #c0392b; }
+
+  /* Totals */
+  .invoice-totals {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e5e5;
+  }
+
+  .total-row {
+    display: flex;
+    gap: 2rem;
+    font-size: 0.88rem;
+    color: #666;
+  }
+
+  .total-row span:last-child {
+    min-width: 100px;
+    text-align: right;
+  }
+
+  .total-row--grand {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111;
+    margin-top: 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e5e5e5;
+  }
+
+  /* Actions */
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .btn-save {
+    background: #111;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 2rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-save:hover { opacity: 0.8; }
+
+  .btn-cancel {
+    color: #999;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .btn-cancel:hover { color: #111; }
+
+  @media (max-width: 700px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .items-header { display: none; }
+    .item-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>

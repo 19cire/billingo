@@ -1,0 +1,51 @@
+.<div class="content">
+    <% if user_signed_in? %>
+    <h1>hello <%= current_user.user_name %></h1>
+    <%= link_to "Abmelden", destroy_user_session_path,
+        data: { turbo_method: :delete },
+        class: "btn-logout" %>
+    <% else %>
+    <div class="container">
+        <h1>Hello</h1>
+        <%= simple_form_for User.new, url: user_session_path do |f| %>
+            <%= f.input :user_name,    placeholder: "Benutzername" %>
+            <%= f.input :password,  placeholder: "Passwort" %>
+            <%= f.button :submit,  "Anmelden" %>
+        <% end %>   
+    </div>
+    <%= link_to "Registrieren", new_user_registration_path %>
+    <% end %>
+</div>
+
+<% if flash[:alert] %>
+  <div class="flash-alert">
+    <%= flash[:alert] %>
+  </div>
+<% end %>
+
+<% if flash[:notice] %>
+  <div class="flash-notice">
+    <%= flash[:notice] %>
+  </div>
+<% end %>
+<style>
+    .flash-alert {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #c0392b;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+}
+
+.flash-notice {
+  background: #d4f4e4;
+  border: 1px solid #6ee7b7;
+  color: #1a7a47;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+}
+</style>

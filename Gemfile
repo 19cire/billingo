@@ -28,6 +28,27 @@ gem "solid_cache"
 gem "solid_queue"
 gem "solid_cable"
 
+# AUTH
+gem "devise"
+
+# Autorise
+gem "pundit"
+
+# Style
+gem "dartsass-rails"
+
+# Simple_Form
+gem "simple_form"
+
+# Bootstrap
+gem "bootstrap", "~> 5.3"
+
+# # Gemfile
+gem "prawn"
+gem "prawn-table"
+gem "hexapdf"
+gem "nokogiri"
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 

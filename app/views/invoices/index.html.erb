@@ -1,0 +1,326 @@
+<div class="invoices-index">
+
+  <!-- Header -->
+  <div class="index-header">
+    <div class="index-header__left">
+      <h1>Rechnungen</h1>
+      <span class="invoice-count"><%= @invoices.count %> gesamt</span>
+        <span class="invoice-total">
+            <%= number_to_currency(@total_amount, unit: "€", separator: ",", delimiter: ".", format: "%n %u") %>
+        </span>
+    </div>
+    <%= link_to "＋ Neue Rechnung", new_invoice_path, class: "btn-new" %>
+  </div>
+
+  <!-- Monats-Filter -->
+  <% months_with_invoices = @invoices.group_by { |i| i.issue_date.strftime("%Y-%m") }.keys.sort %>
+  <% if months_with_invoices.any? %>
+    <div class="month-filters">
+      <button class="month-btn active" data-month="all" onclick="filterMonth('all', this)">Alle</button>
+      <% months_with_invoices.each do |ym| %>
+        <% date = Date.parse("#{ym}-01") %>
+        <button class="month-btn" data-month="<%= ym %>" onclick="filterMonth('<%= ym %>', this)">
+          <%= I18n.l(date, format: "%B %Y") rescue date.strftime("%B %Y") %>
+        </button>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Tabelle -->
+  <div class="table-wrap">
+    <table class="invoice-table" id="invoice-table">
+      <thead>
+        <tr>
+          <th class="sortable" onclick="sortTable(0)">
+            Rechnungsnr. <span class="sort-icon">↕</span>
+          </th>
+          <th class="sortable" onclick="sortTable(1)">
+            Datum <span class="sort-icon">↕</span>
+          </th>
+          <th class="sortable" onclick="sortTable(2)">
+            Firma <span class="sort-icon">↕</span>
+          </th>
+          <th class="sortable" onclick="sortTable(3)" style="text-align:right">
+            Betrag <span class="sort-icon">↕</span>
+          </th>
+          <th class="sortable" onclick="sortTable(4)">
+            Status <span class="sort-icon">↕</span>
+          </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @invoices.each do |invoice| %>
+          <tr class="invoice-row" data-month="<%= invoice.issue_date.strftime("%Y-%m") %>">
+            <td class="cell-number">
+              <%= link_to invoice.number, invoice_path(invoice), class: "invoice-link" %>
+            </td>
+            <td class="cell-date" data-sort="<%= invoice.issue_date.strftime("%Y%m%d") %>">
+              <%= invoice.issue_date.strftime("%d.%m.%Y") %>
+            </td>
+            <td class="cell-firm">
+              <%= invoice.customer&.name || "—" %>
+            </td>
+            <td class="cell-amount" style="text-align:right" data-sort="<%= invoice.gross_amount %>">
+              <%= number_to_currency(invoice.gross_amount, unit: "€", separator: ",", delimiter: ".", format: "%n %u") %>
+            </td>
+            <td class="cell-status">
+              <span class="badge badge--<%= invoice.status %>">
+                <%= case invoice.status
+                    when "paid"    then "Bezahlt"
+                    when "open"    then "Offen"
+                    when "overdue" then "Überfällig"
+                    when "draft"   then "Entwurf"
+                    else invoice.status
+                    end %>
+              </span>
+            </td>
+            <td class="cell-actions">
+              <%= link_to "PDF", download_pdf_invoice_path(invoice), class: "action-link", target: "_blank" %>
+              <%= link_to "✕", invoice_path(invoice),
+                  data: { turbo_method: :delete, turbo_confirm: "Rechnung #{invoice.number} wirklich löschen?" },
+                  class: "action-delete" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <% if @invoices.empty? %>
+      <div class="empty-state">
+        <p>Noch keine Rechnungen vorhanden.</p>
+        <%= link_to "Erste Rechnung erstellen →", new_invoice_path, class: "btn-new" %>
+      </div>
+    <% end %>
+  </div>
+
+</div>
+
+<script>
+  // ── Monatsfilter ──────────────────────────────────────────
+  function filterMonth(month, btn) {
+    document.querySelectorAll(".month-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".invoice-row").forEach(row => {
+      row.style.display = (month === "all" || row.dataset.month === month) ? "" : "none";
+    });
+  }
+
+  // ── Sortierung ────────────────────────────────────────────
+  let sortDir = {};
+
+  function sortTable(col) {
+    const tbody = document.querySelector("#invoice-table tbody");
+    const rows  = Array.from(tbody.querySelectorAll("tr.invoice-row"));
+    sortDir[col] = sortDir[col] === "asc" ? "desc" : "asc";
+    const asc = sortDir[col] === "asc";
+
+    document.querySelectorAll(".sort-icon").forEach(i => i.textContent = "↕");
+    document.querySelectorAll("th.sortable")[col].querySelector(".sort-icon").textContent = asc ? "↑" : "↓";
+
+    rows.sort((a, b) => {
+      const aCell = a.querySelectorAll("td")[col];
+      const bCell = b.querySelectorAll("td")[col];
+      let aVal = aCell.dataset.sort || aCell.textContent.trim();
+      let bVal = bCell.dataset.sort || bCell.textContent.trim();
+
+      // Betrag numerisch sortieren
+      if (col === 3) {
+        return asc ? parseFloat(aVal) - parseFloat(bVal) : parseFloat(bVal) - parseFloat(aVal);
+      }
+      return asc ? aVal.localeCompare(bVal, "de") : bVal.localeCompare(aVal, "de");
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+  }
+</script>
+
+<style>
+  .invoices-index {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+    font-family: sans-serif;
+  }
+
+  .index-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.75rem;
+  }
+
+  .index-header__left {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .index-header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #111;
+    margin: 0;
+  }
+
+  .invoice-count {
+    font-size: 0.82rem;
+    color: #aaa;
+  }
+
+  .btn-new {
+    background: #111;
+    color: white;
+    text-decoration: none;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    display: inline-block;
+  }
+  .btn-new:hover { opacity: 0.75; color: white; }
+
+  /* Monats-Buttons */
+  .month-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .month-btn {
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 100px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.82rem;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .month-btn:hover { border-color: #111; color: #111; }
+  .month-btn.active { background: #111; border-color: #111; color: white; }
+
+  /* Tabelle */
+  .table-wrap {
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  .invoice-table thead tr {
+    border-bottom: 1px solid #e5e5e5;
+    background: #fafafa;
+  }
+
+  .invoice-table th {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #999;
+    white-space: nowrap;
+  }
+
+  .invoice-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .invoice-table th.sortable:hover { color: #111; }
+
+  .sort-icon { font-size: 0.7rem; margin-left: 3px; opacity: 0.5; }
+
+  .invoice-table tbody tr {
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.1s;
+  }
+  .invoice-table tbody tr:last-child { border-bottom: none; }
+  .invoice-table tbody tr:hover { background: #fafafa; }
+
+  .invoice-table td {
+    padding: 0.9rem 1rem;
+    color: #333;
+    vertical-align: middle;
+  }
+
+  .invoice-link {
+    font-weight: 600;
+    color: #111;
+    text-decoration: none;
+    font-family: monospace;
+    font-size: 0.9rem;
+  }
+  .invoice-link:hover { text-decoration: underline; }
+
+  .cell-date { color: #666; }
+  .cell-firm { font-weight: 500; }
+  .cell-amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge--paid    { background: #d4f4e4; color: #1a7a47; }
+  .badge--open    { background: #fef9ec; color: #92680a; }
+  .badge--overdue { background: #fef2f2; color: #c0392b; }
+  .badge--draft   { background: #f0f0f0; color: #666; }
+
+  /* Aktionen */
+  .cell-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .action-link {
+    font-size: 0.8rem;
+    color: #666;
+    text-decoration: none;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid #e5e5e5;
+    border-radius: 5px;
+    transition: all 0.15s;
+  }
+  .action-link:hover { border-color: #111; color: #111; }
+
+  .action-delete {
+    font-size: 0.85rem;
+    color: #ddd;
+    text-decoration: none;
+    transition: color 0.15s;
+    cursor: pointer;
+  }
+  .action-delete:hover { color: #c0392b; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #999;
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 700px) {
+    .invoices-index { padding: 1rem; }
+    .cell-firm { display: none; }
+  }
+</style>

@@ -1,0 +1,98 @@
+<!-- Modal -->
+<div id="customer-modal" class="modal-overlay" style="display:none">
+  <div class="modal">
+
+    <div class="modal-header">
+      <h2>Neuer Kunde</h2>
+      <button type="button" class="modal-close" onclick="document.getElementById('customer-modal').style.display='none'">✕</button>
+    </div>
+
+    <%= form_with(model: Customer.new, url: customers_path, html: { data: { turbo: false } }) do |f| %>
+
+      <div class="modal-body">
+
+        <div class="form-field">
+          <%= f.label :name, "Name / Firma" %>
+          <%= f.text_field :name, class: "form-input", placeholder: "Muster GmbH" %>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <%= f.label :street, "Straße" %>
+            <%= f.text_field :street, class: "form-input", placeholder: "Musterstraße 1" %>
+          </div>
+          <div class="form-field">
+            <%= f.label :postal_code, "PLZ" %>
+            <%= f.text_field :postal_code, class: "form-input", placeholder: "12345" %>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <%= f.label :city, "Stadt" %>
+            <%= f.text_field :city, class: "form-input", placeholder: "München" %>
+          </div>
+          <div class="form-field">
+            <%= f.label :country_code, "Land" %>
+            <%= f.select :country_code,
+                [["Deutschland", "DE"], ["Österreich", "AT"], ["Schweiz", "CH"]],
+                { selected: "DE" },
+                class: "form-input" %>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <%= f.label :email, "E-Mail" %>
+            <%= f.email_field :email, class: "form-input", placeholder: "info@kunde.de" %>
+          </div>
+          <div class="form-field">
+            <%= f.label :phone, "Telefon" %>
+            <%= f.phone_field :phone, class: "form-input", placeholder: "+49 89 123456" %>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <%= f.label :vat_id, "USt-IdNr." %>
+            <%= f.text_field :vat_id, class: "form-input", placeholder: "DE123456789" %>
+          </div>
+          <div class="form-field">
+            <%= f.label :buyer_reference, "Leitweg-ID (B2G)" %>
+            <%= f.text_field :buyer_reference, class: "form-input", placeholder: "Optional" %>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <%= f.label :contact_name, "Ansprechpartner" %>
+            <%= f.text_field :contact_name, class: "form-input", placeholder: "Max Mustermann" %>
+          </div>
+          <div class="form-field">
+            <%= f.label :payment_terms, "Zahlungsbedingungen" %>
+            <%= f.text_field :payment_terms, class: "form-input", placeholder: "30 Tage netto" %>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <%= f.label :notes, "Notizen" %>
+          <%= f.text_area :notes, class: "form-input", placeholder: "Interne Notizen", rows: 2 %>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="document.getElementById('customer-modal').style.display='none'">Abbrechen</button>
+        <%= f.submit "Kunde speichern", class: "btn-save" %>
+      </div>
+
+    <% end %>
+
+  </div>
+</div>
+
+<script>
+  document.getElementById("customer-modal").addEventListener("click", function(e) {
+    if (e.target === this) this.style.display = "none";
+  });
+</script>

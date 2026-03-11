@@ -1,0 +1,327 @@
+<div class="invoice-show">
+
+  <!-- Header -->
+  <div class="invoice-show__header">
+    <div>
+      <%= link_to "← Alle Rechnungen", invoices_path, class: "btn-back" %>
+    </div>
+    <div class="invoice-show__actions">
+      <%= link_to "Bearbeiten", edit_invoice_path(@invoice), class: "btn btn--secondary" %>
+      <%= link_to "Löschen", invoice_path(@invoice), data: { turbo_method: :delete, turbo_confirm: "Rechnung wirklich löschen?" }, class: "btn btn--danger" %>
+    </div>
+  </div>
+
+  <!-- Invoice Card -->
+  <div class="invoice-card">
+
+    <!-- Top Row -->
+    <div class="invoice-card__top">
+      <div>
+        <p class="invoice-label">Rechnungsnummer</p>
+        <h1 class="invoice-number">#<%= @invoice.number %></h1>
+      </div>
+      <span class="badge badge--<%= @invoice.status %>">
+        <%= case @invoice.status
+            when "paid"    then "Bezahlt"
+            when "open"    then "Offen"
+            when "overdue" then "Überfällig"
+            when "draft"   then "Entwurf"
+            end %>
+      </span>
+    </div>
+
+    <!-- Addresses -->
+    <div class="invoice-addresses">
+
+      <div class="address-block">
+        <p class="invoice-label">Absender</p>
+        <strong><%= @invoice.seller.name %></strong>
+        <p><%= @invoice.seller.street %></p>
+        <p><%= @invoice.seller.postal_code %> <%= @invoice.seller.city %></p>
+        <p><%= @invoice.seller.country_code %></p>
+        <% if @invoice.seller.vat_id.present? %>
+          <p class="tax-info">USt-IdNr: <%= @invoice.seller.vat_id %></p>
+        <% elsif @invoice.seller.tax_id.present? %>
+          <p class="tax-info">St-Nr: <%= @invoice.seller.tax_id %></p>
+        <% end %>
+        <% if @invoice.seller.iban.present? %>
+          <p class="tax-info">IBAN: <%= @invoice.seller.iban %></p>
+        <% end %>
+      </div>
+
+      <div class="address-block">
+        <p class="invoice-label">Empfänger</p>
+        <strong><%= @invoice.customer.name %></strong>
+        <p><%= @invoice.customer.street %></p>
+        <p><%= @invoice.customer.postal_code %> <%= @invoice.customer.city %></p>
+        <p><%= @invoice.customer.country_code %></p>
+        <% if @invoice.customer.vat_id.present? %>
+          <p class="tax-info">USt-IdNr: <%= @invoice.customer.vat_id %></p>
+        <% end %>
+      </div>
+
+      <div class="address-block">
+        <p class="invoice-label">Datum</p>
+        <p><strong>Ausgestellt:</strong> <%= @invoice.issue_date.strftime("%d.%m.%Y") %></p>
+        <p><strong>Fällig am:</strong> <%= @invoice.due_date.strftime("%d.%m.%Y") %></p>
+        <% if @invoice.delivery_date.present? %>
+          <p><strong>Lieferdatum:</strong> <%= @invoice.delivery_date.strftime("%d.%m.%Y") %></p>
+        <% end %>
+        <% if @invoice.order_reference.present? %>
+          <p><strong>Bestellnr.:</strong> <%= @invoice.order_reference %></p>
+        <% end %>
+      </div>
+
+    </div>
+
+    <!-- Items Table -->
+    <div class="invoice-items">
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>Pos.</th>
+            <th>Beschreibung</th>
+            <th>Menge</th>
+            <th>Einheit</th>
+            <th>Einzelpreis</th>
+            <th>MwSt.</th>
+            <th>Gesamt</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @invoice.invoice_items.each do |item| %>
+            <tr>
+              <td class="pos"><%= item.position %></td>
+              <td>
+                <strong><%= item.description %></strong>
+                <% if item.detail.present? %>
+                  <p class="item-detail"><%= item.detail %></p>
+                <% end %>
+              </td>
+              <td><%= item.quantity %></td>
+              <td><%= item.unit_code %></td>
+              <td>€ <%= number_with_precision(item.unit_price, precision: 2) %></td>
+              <td><%= item.tax_rate %>%</td>
+              <td>€ <%= number_with_precision(item.line_net_amount, precision: 2) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Totals -->
+    <div class="invoice-totals">
+      <div class="total-row">
+        <span>Nettobetrag</span>
+        <span>€ <%= number_with_precision(@invoice.net_amount, precision: 2) %></span>
+      </div>
+      <div class="total-row">
+        <span>MwSt. (<%= @invoice.tax_rate %>%)</span>
+        <span>€ <%= number_with_precision(@invoice.tax_amount, precision: 2) %></span>
+      </div>
+      <div class="total-row total-row--grand">
+        <span>Gesamtbetrag</span>
+        <span>€ <%= number_with_precision(@invoice.gross_amount, precision: 2) %></span>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <% if @invoice.notes.present? %>
+      <div class="invoice-notes">
+        <p class="invoice-label">Notizen</p>
+        <p><%= @invoice.notes %></p>
+      </div>
+    <% end %>
+
+    <!-- Payment Terms -->
+    <% if @invoice.payment_terms.present? %>
+      <div class="invoice-notes">
+        <p class="invoice-label">Zahlungsbedingungen</p>
+        <p><%= @invoice.payment_terms %></p>
+      </div>
+    <% end %>
+
+  </div>
+
+</div>
+<%= link_to "📄 PDF herunterladen", download_pdf_invoice_path(@invoice), class: "btn btn--primary" %>
+<style>
+  body {
+    font-family: sans-serif;
+    background: #fafafa;
+    color: #111;
+    margin: 0;
+  }
+
+  .invoice-show {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .invoice-show__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-back {
+    font-size: 0.85rem;
+    color: #666;
+    text-decoration: none;
+  }
+  .btn-back:hover { color: #111; }
+
+  .invoice-show__actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 7px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.8; }
+  .btn--secondary { background: white; color: #111; border: 1px solid #e5e5e5; }
+  .btn--danger    { background: #fef2f2; color: #c0392b; border: 1px solid #fca5a5; }
+
+  /* Card */
+  .invoice-card {
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .invoice-card__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 2rem;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .invoice-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #999;
+    margin-bottom: 0.25rem;
+  }
+
+  .invoice-number {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 100px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .badge--paid    { background: #d4f4e4; color: #1a7a47; }
+  .badge--open    { background: #fef9ec; color: #92680a; }
+  .badge--overdue { background: #fef2f2; color: #c0392b; }
+  .badge--draft   { background: #f0f0f0; color: #666; }
+
+  /* Addresses */
+  .invoice-addresses {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    padding: 2rem;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .address-block p { font-size: 0.88rem; color: #555; line-height: 1.6; }
+  .address-block strong { font-size: 0.95rem; }
+  .tax-info { color: #999 !important; font-size: 0.8rem !important; margin-top: 0.25rem; }
+
+  /* Items Table */
+  .invoice-items { padding: 0 2rem; }
+
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  .items-table th {
+    text-align: left;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #999;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .items-table td {
+    padding: 0.85rem 0.5rem;
+    border-bottom: 1px solid #f9f9f9;
+    color: #333;
+  }
+
+  .items-table tr:last-child td { border-bottom: none; }
+
+  .pos { color: #999; font-size: 0.8rem; }
+  .item-detail { font-size: 0.8rem; color: #999; margin-top: 0.2rem; }
+
+  /* Totals */
+  .invoice-totals {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .total-row {
+    display: flex;
+    gap: 3rem;
+    font-size: 0.88rem;
+    color: #666;
+  }
+
+  .total-row span:last-child {
+    min-width: 120px;
+    text-align: right;
+  }
+
+  .total-row--grand {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e5e5e5;
+    margin-top: 0.25rem;
+  }
+
+  /* Notes */
+  .invoice-notes {
+    padding: 1.25rem 2rem;
+    border-top: 1px solid #f0f0f0;
+    font-size: 0.88rem;
+    color: #555;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 600px) {
+    .invoice-addresses { grid-template-columns: 1fr; }
+    .invoice-show { padding: 1rem; }
+  }
+</style>

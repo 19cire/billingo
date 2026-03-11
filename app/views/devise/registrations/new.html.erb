@@ -1,0 +1,15 @@
+<div class="content">
+  <h1>Registrierung</h1>
+<%= simple_form_for User.new, url: user_registration_path, method: :post do |f| %>
+  <div class="form-inputs">
+    <%= f.input :user_name %>
+    <%= f.input :email %>
+    <%= f.input :password %>
+    <%= f.input :password_confirmation %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit, "Registrieren", class: "btn btn-primary" %>
+  </div>
+<% end %>
+</div>
